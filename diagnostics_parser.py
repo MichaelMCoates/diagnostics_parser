@@ -22,7 +22,8 @@ KEY_RECEIVED_EXTERNAL = "received external-adapter"
 KEY_SENT_IN_RUNTIME = "sent in-runtime"
 
 ## Arguments
-# By default, the diagnostics parser will take a debug.log file in the same directory, print basic information and errors to the console, and output a debug_parsed.json file including all of the received logs.
+# By default, the diagnostics parser will take a debug.log file in the same directory, print basic information and errors to the console, 
+# and output a debug_parsed.json file including all of the received logs.
 
 parser = argparse.ArgumentParser(description="Takes debug.log and constructs standard JSON.")
 parser.add_argument('--logpath', help='path full/relative to debug.log file')

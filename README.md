@@ -1,11 +1,13 @@
 # diagnostics_parser
 
+
 ## Make sure you have python installed. 
 
 ## By default, the diagnostics parser will take a debug.log file in the same directory, print basic information and errors to the console, and output a debug_parsed.json file including all of the received logs.
 
 ## Run the following to see the list of arguments you can provide to change the default behavior:
 `python diagnostics_parser.py --help`
+
 
 
 ## Examples:
@@ -39,6 +41,7 @@
 
 `python diagnostics_parser.py --logpath ./too_many_events.log --noeventlogs`
 
+
 ### Situation 6:
 #### What if my log file has way too many external events in it, but I want to keep the normal events? 
 
@@ -62,4 +65,9 @@
 
 `python diagnostics_parser.py --noentitylogs`
 
+
+### Situation 10:
+#### What if I'm in Mac and want to have some fun with color output?
+
+`python diagnostics_parser_mac_color.py`
 

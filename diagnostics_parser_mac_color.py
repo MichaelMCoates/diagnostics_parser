@@ -17,7 +17,7 @@ def prBlack(skk): print("\033[98m{}\033[00m" .format(skk))
 
 ## Constants
 DEFAULT_DEBUG_LOG_FILE_PATH = "debug.log"
-DEFAULT_DEBUG_LOG_OUT_PATH = "debug_standard.json"
+DEFAULT_DEBUG_LOG_OUT_PATH = "debug_parsed.json"
 
 KEY_PROCESS_VERSIONS = "process.versions"
 KEY_RAISE_MANY_EVENTS = "raise-many-events"
@@ -32,18 +32,24 @@ KEY_RECEIVED_EXTERNAL = "received external-adapter"
 KEY_SENT_IN_RUNTIME = "sent in-runtime"
 
 ## Arguments
-# By default, the diagnostics parser will take a debug.log file in the same directory, print basic information and errors to the console, and output a debug_standard.json file including all of the received logs.
+# By default, the diagnostics parser will take a debug.log file in the same directory, print basic information and errors to the console, 
+# and output a debug_parsed.json file including all of the received logs.
 
 parser = argparse.ArgumentParser(description="Takes debug.log and constructs standard JSON.")
 parser.add_argument('--logpath', help='path full/relative to debug.log file')
+parser.add_argument('--outpath', help='path to output parsed log file to')
 parser.add_argument('--noconsole', help='Don\'t print to console', action='store_true')
 parser.add_argument('--noeventlogs', help='Don\'t include any event logs in output JSON', action='store_true')
 parser.add_argument('--noexternallogs', help='Don\'t include external adapter event logs in output JSON', action='store_true')
 parser.add_argument('--includesentlogs', help='Include sent in-runtime event logs in output JSON', action='store_true')
+parser.add_argument('--noentitylogs', help='Don\'t include logs grouped by entity in output JSON', action='store_true')
+parser.add_argument('--norenderlogs', help='Don\'t include logs grouped by render frame ID in output JSON', action='store_true')
 args = parser.parse_args()
+
 
 class ParseDebugLog(object):
     """ Takes debug.log and constructs standard JSON. """
+
     def __init__(self):
         self.start_time = int(round(time.time() * 1000))
         self.debug_json = {}
@@ -124,7 +130,8 @@ class ParseDebugLog(object):
                     message_str, timestamp, current_line)
             elif not args.noeventlogs:
                 # Grabs all sync and external events
-                self.handle_extraneous_events(message_str, timestamp, current_line)
+                self.handle_extraneous_events(
+                    message_str, timestamp, current_line)
 
             idx += 1
         return  # parse_log_lines
@@ -158,8 +165,7 @@ class ParseDebugLog(object):
             json_str = re.sub(r'^.*?{', '{', message_str)
             app_info = json.loads(json_str)
             uuid = app_info["payload"]["uuid"]
-            uuid_group = self.entities.setdefault(
-                uuid, {})
+            uuid_group = self.entities.setdefault(uuid, {})
             name_group = uuid_group.setdefault(uuid, app_info)
             name_group["time_ended"] = timestamp
         elif KEY_CLOSE_WINDOW in message_str:
@@ -167,50 +173,51 @@ class ParseDebugLog(object):
             window_info = json.loads(json_str)
             uuid = window_info["payload"]["uuid"]
             name = window_info["payload"]["name"]
-            uuid_group = self.entities.setdefault(
-                uuid, {})
+            uuid_group = self.entities.setdefault(uuid, {})
             name_group = uuid_group.setdefault(name, window_info)
             name_group["time_ended"] = timestamp
 
         # finally, after tracking launches and closes, map the event log to entities and render frames:
         if not args.noeventlogs:
-            render_frame_log_group = self.render_frame_logs.setdefault(render_frame_id, [])
-            render_frame_log_group.append(current_line)
+            if not args.norenderlogs:
+                render_frame_log_group = self.render_frame_logs.setdefault(render_frame_id, [])
+                render_frame_log_group.append(current_line)
 
-            identity = re.findall(r'\[(.*?)\]', message_str)
-            uuid = identity[0]
-            name = identity[1]
-            uuid_group = self.entity_logs.setdefault(uuid, {})
-            name_group = uuid_group.setdefault(name, [])
-            name_group.append(current_line) 
+            if not args.noentitylogs:
+                identity = re.findall(r'\[(.*?)\]', message_str)
+                uuid = identity[0]
+                name = identity[1]
+                uuid_group = self.entity_logs.setdefault(uuid, {})
+                name_group = uuid_group.setdefault(name, [])
+                name_group.append(current_line)
         return  # handle_received_in_runtime_events
-    
+
     def handle_extraneous_events(self, message_str, timestamp, current_line):
         """ Grabs all sync and external events """
         if message_str.startswith(KEY_RECEIVED_IN_RUNTIME_SYNC):
-            # TODO: Is this a render frame ID or nah? What is this number?
-            render_frame_id = re.search(
-                r'(?<=received in-runtime-sync : )(.*?)(?= \[)', message_str).group()
-            render_frame_log_group = self.render_frame_logs.setdefault(
-                render_frame_id, [])
-            render_frame_log_group.append(current_line)
+            if not args.norenderlogs:
+                # TODO: Is this a render frame ID or nah? What is this number?
+                render_frame_id = re.search(
+                    r'(?<=received in-runtime-sync : )(.*?)(?= \[)', message_str).group()
+                render_frame_log_group = self.render_frame_logs.setdefault(render_frame_id, [])
+                render_frame_log_group.append(current_line)
 
-            identity = re.findall(r"\[(.*?)\]", message_str)
-            uuid = identity[0]
-            name = identity[1]
-            uuid_group = self.entity_logs.setdefault(uuid, {})
-            name_group = uuid_group.setdefault(name, [])
-            name_group.append(current_line)
-        elif not args.noexternallogs and message_str.startswith(KEY_RECEIVED_EXTERNAL):
+            if not args.noentitylogs:
+                identity = re.findall(r"\[(.*?)\]", message_str)
+                uuid = identity[0]
+                name = identity[1]
+                uuid_group = self.entity_logs.setdefault(uuid, {})
+                name_group = uuid_group.setdefault(name, [])
+                name_group.append(current_line)
+        elif not args.noexternallogs and not args.norenderlogs and message_str.startswith(KEY_RECEIVED_EXTERNAL):
             # TODO: Is this a render frame ID or nah? What is this number?
             render_frame_id = re.search(
                 r'(?<=received external-adapter <= )(.*?)(?= \{)', message_str).group()
-            render_frame_log_group = self.render_frame_logs.setdefault(
-                render_frame_id, [])
+            render_frame_log_group = self.render_frame_logs.setdefault(render_frame_id, [])
             render_frame_log_group.append(current_line)
 
-        # TODO: Do we want to add the sent-in-runtime events? It significantly increases the file size, but there may be relevant payloads we want in there. 
-        elif args.includesentlogs and message_str.startswith(KEY_SENT_IN_RUNTIME):
+        # TODO: Do we want to add the sent-in-runtime events? It significantly increases the file size, but there may be relevant payloads we want in there.
+        elif args.includesentlogs and not args.norenderlogs and message_str.startswith(KEY_SENT_IN_RUNTIME):
             render_frame_id = re.search(
                 r'(?<=sent in-runtime <= )(.*?)(?= \{)', message_str).group()
             render_frame_log_group = self.render_frame_logs.setdefault(render_frame_id, [])

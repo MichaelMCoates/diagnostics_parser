@@ -3,7 +3,7 @@
 
 - Make sure you have python installed. 
 - By default, the diagnostics parser will take a `debug.log` file in the same directory, print basic information and errors to the console, and output a `debug_parsed.json` file including all of the received logs.
-- Run the following to see the list of arguments you can provide to change the default behavior:
+- Run the following to see the list of arguments you can provide to change the default behavior:  
 `python diagnostics_parser.py --help`
 
 ## Current limitations

@@ -56,9 +56,9 @@ class ParseDebugLog(object):
         """ Main function for class. """
         log_lines = self.load_debug_log()
         self.parse_log_lines(log_lines)
+        self.write_debug_json()
         if not args.noconsole:
             self.print_to_console()
-        self.write_debug_json()
         self.print_time_to_execute()
 
     def load_debug_log(self):

@@ -13,6 +13,7 @@ KEY_PROCESS_VERSIONS = "process.versions"
 KEY_RAISE_MANY_EVENTS = "raise-many-events"
 KEY_CREATE_APPLICATION = "create-application"
 KEY_CLOSE_APPLICATION = "close-application"
+KEY_FIRE_CONSTRUCTOR_CALLBACK = "fire-constructor-callback"
 KEY_CLOSE_WINDOW = "action\":\"close-window"
 KEY_CONSOLE_LOG = "INFO:CONSOLE"
 KEY_IGNORE_LICENSE_KEY = "\"WARNING : Application does not have a valid OpenFin license key implemented"
@@ -138,7 +139,21 @@ class ParseDebugLog(object):
             window_info = json.loads(json_str)
             entity_info = window_info["payload"][0][1]
 
-            # TODO: This timestamp is for raise_many_events, maybe tag to window-create-window?
+            # TODO: This timestamp is for raise-many-events, maybe tag to window-create-window?
+            entity_info['time_started'] = timestamp
+            # Add entity info, grouped by uuid/name
+            uuid_group = self.entities.setdefault(entity_info["uuid"], {})
+            uuid_group[entity_info["name"]] = entity_info
+            # Add entity info, grouped by render_frame_id
+            render_frame_group = self.render_frames.setdefault(render_frame_id, {})
+            render_frame_group[entity_info["name"]] = entity_info
+        if KEY_FIRE_CONSTRUCTOR_CALLBACK in message_str:
+            # Adam found that some windows came up without a time_started. Seems like it happens when raise-many-events doesn't get hit. 
+            # TODO: Looks like we can get a time_created from fire-constructor-callback listen though, although it's probably not reliable
+            json_str = re.sub(r'^.*?{', '{', message_str)
+            window_info = json.loads(json_str)
+            entity_info = window_info["payload"]
+
             entity_info['time_started'] = timestamp
             # Add entity info, grouped by uuid/name
             uuid_group = self.entities.setdefault(entity_info["uuid"], {})

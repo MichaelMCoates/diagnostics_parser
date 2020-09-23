@@ -1077,6 +1077,14 @@
   },
   "render_frames": {
     "1": {
+      "fdc3-resolver": {
+        "name": "fdc3-resolver",
+        "time_started": "2020-09-15 15:49:18.077",
+        "timestamp": 1600181358073,
+        "topic": "window",
+        "type": "fire-constructor-callback",
+        "uuid": "fdc3-service"
+      },
       "fdc3-service": {
         "name": "fdc3-service",
         "time_started": "2020-09-15 15:49:18.052",
